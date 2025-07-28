@@ -1,18 +1,25 @@
-import multer from 'multer';
+import { IncomingForm } from 'formidable';
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 
-// Cloudinary config
+// Disable Next.js's default body parsing
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+// Cloudinary configuration
 cloudinary.config({
   cloud_name: 'dihstpdcn',
   api_key: '248125376569948',
   api_secret: 'lmG-CCfd1NjxpWoNDJv-V6Ws4MU',
 });
 
-// Mongo URI from env
-const MONGO_URI ="mongodb+srv://erarjunsingh32085:123@cluster0.zvimsjg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+// MongoDB URI
+const MONGO_URI = "mongodb+srv://erarjunsingh32085:123@cluster0.zvimsjg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-// Mongoose schema
+// MongoDB schema
 const standeeOrderSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true, match: /^\d{10}$/ },
@@ -24,9 +31,10 @@ const standeeOrderSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now },
 });
 
+// Prevent model overwrite on hot-reload
 const StandeeOrder = mongoose.models.StandeeOrder || mongoose.model('StandeeOrder', standeeOrderSchema);
 
-// DB connect helper
+// Connect to MongoDB
 async function connectDB() {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(MONGO_URI, {
@@ -36,18 +44,10 @@ async function connectDB() {
   }
 }
 
-// Helper to parse multipart/form-data manually (Vercel doesn't support `multer`)
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-import formidable from 'formidable';
-
+// Parse multipart form data
 function parseForm(req) {
   return new Promise((resolve, reject) => {
-    const form = new formidable.IncomingForm({ keepExtensions: true, maxFileSize: 5 * 1024 * 1024 });
+    const form = new IncomingForm({ keepExtensions: true, maxFileSize: 5 * 1024 * 1024 });
     form.parse(req, (err, fields, files) => {
       if (err) reject(err);
       else resolve({ fields, files });
@@ -55,7 +55,7 @@ function parseForm(req) {
   });
 }
 
-// Main POST handler
+// Main handler
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
@@ -70,20 +70,21 @@ export default async function handler(req, res) {
     const logo = files.logo;
     const upiQR = files.upi_qr;
 
+    // Validations
     if (!name || !phone || !standee_type || !logo) {
       return res.status(400).json({ success: false, message: 'Required fields are missing' });
     }
 
     if (!/^\d{10}$/.test(phone)) {
-      return res.status(400).json({ success: false, message: 'Phone number must be 10 digits.' });
+      return res.status(400).json({ success: false, message: 'Phone number must be 10 digits' });
     }
 
-    // Upload logo to cloudinary
+    // Upload logo
     const logoUpload = await cloudinary.uploader.upload(logo.filepath, {
       folder: 'standee_app',
     });
 
-    // Upload upi_qr if present
+    // Upload UPI QR if available
     let upiQRUrl = null;
     if (upiQR) {
       const upiUpload = await cloudinary.uploader.upload(upiQR.filepath, {
@@ -92,6 +93,7 @@ export default async function handler(req, res) {
       upiQRUrl = upiUpload.secure_url;
     }
 
+    // Create new document
     const newOrder = new StandeeOrder({
       name,
       phone,
