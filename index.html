@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Standee Form</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-blue-100 min-h-screen flex items-center justify-center p-4">
+
+  <div class="bg-white shadow-xl rounded-xl max-w-3xl w-full p-6">
+    <h2 class="text-3xl font-bold text-center text-blue-800 mb-6">Apply For The Standee Design</h2>
+
+    <div id="step-1">
+      <h3 class="text-xl font-semibold mb-4">Step 1: General Info</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <input type="text" id="name" placeholder="Full Name" class="border p-2 rounded" required>
+        <input type="text" id="phone" placeholder="WhatsApp Number" class="border p-2 rounded" required>
+        <input type="text" id="address" placeholder="Address" class="border p-2 rounded">
+      </div>
+
+      <label class="block font-medium mb-1 mt-4 text-blue-700">Upload Your Logo (Required)</label>
+      <input type="file" id="logo" accept="image/*" class="border p-2 rounded w-full mb-6" required>
+
+      <div class="flex justify-end">
+        <button id="next" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Next</button>
+      </div>
+    </div>
+
+    <form id="step-2" class="hidden" enctype="multipart/form-data">
+      <h3 class="text-xl font-semibold mb-4">Step 2: Standee Details</h3>
+
+      <select id="standee_type" class="border p-2 rounded w-full mb-4" required>
+        <option value="">Select Standee Type</option>
+        <option>1 QR Standee</option>
+        <option>2 QR Standee</option>
+        <option>3 QR Standee</option>
+        <option>4 QR Standee</option>
+        <option>5 QR Standee</option>
+        <option>6 QR Standee</option>
+        <option>7 QR Standee</option>
+        <option>8 QR Standee</option>
+        <option>3 QR Hrzntl Standee</option>
+        <option>4 QR Hrzntl Standee</option>
+        <option>5 QR Hrzntl Standee</option>
+        <option>Business Card</option>
+        <option>VCard</option>
+        <option>VCard 2 QR</option>
+      </select>
+
+      <div id="icons-container" class="mb-4 hidden">
+        <label class="block font-medium mb-2">Select Icons:</label>
+        <div id="icon-options" class="flex flex-wrap gap-4"></div>
+        <input type="file" id="upi_qr" accept="image/*" class="mt-4 hidden">
+        <input type="text" id="other_icons" placeholder="Other Icons (optional)" class="border p-2 rounded w-full mt-2">
+      </div>
+
+      <div class="flex justify-between pt-6">
+        <button type="button" id="back" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Back</button>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Submit</button>
+      </div>
+    </form>
+
+    <div id="toast" class="fixed bottom-4 right-4 hidden px-4 py-2 rounded text-white bg-green-600"></div>
+  </div>
+
+  <script>
+    const step1 = document.getElementById('step-1');
+    const step2 = document.getElementById('step-2');
+    const nextBtn = document.getElementById('next');
+    const backBtn = document.getElementById('back');
+    const form = document.getElementById('step-2');
+
+    const showToast = (message, success = true) => {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded text-white ${success ? 'bg-green-600' : 'bg-red-500'}`;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    };
+
+    const getIconLimit = (type) => {
+      if (type === 'VCard 2 QR') return 2;
+      const match = type.match(/^\d+/);
+      return match ? Math.min(parseInt(match[0]), 5) : null;
+    };
+
+    const allIcons = ["Google", "Instagram", "UPI", "Facebook", "YouTube", "Whatsapp", "Website", "justdial"];
+    let selectedIcons = [];
+
+    document.getElementById('standee_type').addEventListener('change', function () {
+      const type = this.value;
+      const iconLimit = getIconLimit(type);
+      const hide = ["Business Card", "VCard"].includes(type);
+      const iconsContainer = document.getElementById('icons-container');
+      const iconOptions = document.getElementById('icon-options');
+      iconsContainer.classList.toggle('hidden', hide);
+
+      if (!hide) {
+        iconOptions.innerHTML = "";
+        selectedIcons = [];
+        allIcons.forEach(icon => {
+          const label = document.createElement('label');
+          label.className = 'flex items-center gap-2';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = icon;
+          checkbox.onchange = (e) => {
+            if (e.target.checked) {
+              if (iconLimit && selectedIcons.length >= iconLimit) {
+                e.target.checked = false;
+                showToast(`You can select up to ${iconLimit} icons only.`, false);
+              } else {
+                selectedIcons.push(icon);
+                if (icon === "UPI") {
+                  document.getElementById("upi_qr").classList.remove("hidden");
+                }
+              }
+            } else {
+              selectedIcons = selectedIcons.filter(i => i !== icon);
+              if (icon === "UPI") {
+                document.getElementById("upi_qr").classList.add("hidden");
+              }
+            }
+          };
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(icon));
+          iconOptions.appendChild(label);
+        });
+      }
+    });
+
+    nextBtn.onclick = () => {
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const logo = document.getElementById('logo').files[0];
+
+      if (!name || !phone || !/^\d{10}$/.test(phone) || !logo) {
+        showToast('Please fill all required fields in Step 1.', false);
+        return;
+      }
+
+      step1.classList.add('hidden');
+      step2.classList.remove('hidden');
+    };
+
+    backBtn.onclick = () => {
+      step2.classList.add('hidden');
+      step1.classList.remove('hidden');
+    };
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append("name", document.getElementById('name').value);
+      formData.append("phone", document.getElementById('phone').value);
+      formData.append("standee_type", document.getElementById('standee_type').value);
+      formData.append("icons_selected", selectedIcons.join(","));
+      formData.append("other_icons", document.getElementById('other_icons').value);
+      formData.append("logo", document.getElementById('logo').files[0]);
+
+      const upiQR = document.getElementById('upi_qr').files[0];
+      if (upiQR) formData.append("upi_qr", upiQR);
+
+      try {
+        const res = await fetch("https://cutomer-data.vercel.app/api/submit", {
+          method: "POST",
+          body: formData,
+        });
+        const result = await res.json();
+        if (res.ok) {
+          showToast(result.message || "Submitted successfully");
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          showToast(result.message || "Submission failed", false);
+        }
+      } catch (err) {
+        showToast("Network error", false);
+      }
+    };
+  </script>
+</body>
+</html>
