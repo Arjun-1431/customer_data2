@@ -10,12 +10,12 @@
   <div class="bg-white shadow-xl rounded-xl max-w-3xl w-full p-6">
     <h2 class="text-3xl font-bold text-center text-blue-800 mb-6">Apply For The Standee Design</h2>
 
+    <!-- Step 1 -->
     <div id="step-1">
       <h3 class="text-xl font-semibold mb-4">Step 1: General Info</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <input type="text" id="name" placeholder="Full Name" class="border p-2 rounded" required>
-        <input type="text" id="phone" placeholder="WhatsApp Number" class="border p-2 rounded" required>
-        <input type="text" id="address" placeholder="Address" class="border p-2 rounded">
+        <input type="text" id="phone" placeholder="WhatsApp Number (10 digits)" class="border p-2 rounded" required>
       </div>
 
       <label class="block font-medium mb-1 mt-4 text-blue-700">Upload Your Logo (Required)</label>
@@ -26,6 +26,7 @@
       </div>
     </div>
 
+    <!-- Step 2 -->
     <form id="step-2" class="hidden" enctype="multipart/form-data">
       <h3 class="text-xl font-semibold mb-4">Step 2: Standee Details</h3>
 
@@ -60,7 +61,7 @@
       </div>
     </form>
 
-    <div id="toast" class="fixed bottom-4 right-4 hidden px-4 py-2 rounded text-white bg-green-600"></div>
+    <div id="toast" class="fixed bottom-4 right-4 hidden px-4 py-2 rounded text-white bg-green-600 z-50"></div>
   </div>
 
   <script>
@@ -73,7 +74,7 @@
     const showToast = (message, success = true) => {
       const toast = document.getElementById('toast');
       toast.textContent = message;
-      toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded text-white ${success ? 'bg-green-600' : 'bg-red-500'}`;
+      toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded text-white z-50 ${success ? 'bg-green-600' : 'bg-red-600'}`;
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 3000);
     };
@@ -174,6 +175,7 @@
           showToast(result.message || "Submission failed", false);
         }
       } catch (err) {
+        console.error("[Form Error]", err);
         showToast("Network error", false);
       }
     };
