@@ -1,15 +1,15 @@
 import { IncomingForm } from 'formidable';
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
-import fs from 'fs';
 
+// Disable body parsing for file upload
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-// Cloudinary config
+// Cloudinary configuration
 cloudinary.config({
   cloud_name: 'dihstpdcn',
   api_key: '248125376569948',
@@ -18,7 +18,7 @@ cloudinary.config({
 
 const MONGO_URI = 'mongodb+srv://erarjunsingh32085:123@cluster0.zvimsjg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
-// Mongoose schema
+// Mongo schema
 const standeeOrderSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true, match: /^\d{10}$/ },
@@ -30,8 +30,7 @@ const standeeOrderSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now },
 });
 
-const StandeeOrder =
-  mongoose.models.StandeeOrder || mongoose.model('StandeeOrder', standeeOrderSchema);
+const StandeeOrder = mongoose.models.StandeeOrder || mongoose.model('StandeeOrder', standeeOrderSchema);
 
 async function connectDB() {
   if (mongoose.connection.readyState === 0) {
@@ -42,12 +41,14 @@ async function connectDB() {
   }
 }
 
+// Parse multipart form
 function parseForm(req) {
   return new Promise((resolve, reject) => {
-    const form = new IncomingForm({ keepExtensions: true });
+    const form = new IncomingForm({ multiples: true, keepExtensions: true });
+
     form.parse(req, (err, fields, files) => {
-      if (err) return reject(err);
-      resolve({ fields, files });
+      if (err) reject(err);
+      else resolve({ fields, files });
     });
   });
 }
@@ -59,11 +60,11 @@ export default async function handler(req, res) {
 
   try {
     await connectDB();
-    const { fields, files } = await parseForm(req);
 
+    const { fields, files } = await parseForm(req);
     const { name, phone, standee_type, icons_selected = '', other_icons = '' } = fields;
-    const logo = files.logo?.[0] || files.logo;
-    const upiQR = files.upi_qr?.[0] || files.upi_qr;
+    const logo = files.logo;
+    const upiQR = files.upi_qr;
 
     if (!name || !phone || !standee_type || !logo) {
       return res.status(400).json({ success: false, message: 'Required fields are missing' });
@@ -78,6 +79,7 @@ export default async function handler(req, res) {
       folder: 'standee_app',
     });
 
+    // Upload optional UPI QR
     let upiQRUrl = null;
     if (upiQR && upiQR.filepath) {
       const upiUpload = await cloudinary.uploader.upload(upiQR.filepath, {
@@ -86,6 +88,7 @@ export default async function handler(req, res) {
       upiQRUrl = upiUpload.secure_url;
     }
 
+    // Save to MongoDB
     const newOrder = new StandeeOrder({
       name,
       phone,
@@ -100,7 +103,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({ success: true, message: 'Order submitted successfully.' });
   } catch (err) {
-    console.error('[Error]', err);
+    console.error('[Submit API Error]', err);
     res.status(500).json({ success: false, message: 'Server Error', error: err.message });
   }
 }
