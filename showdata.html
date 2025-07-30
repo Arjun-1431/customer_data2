@@ -1,172 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Standee Orders</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 2rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    input {
-      padding: 10px;
-      width: 300px;
-      margin-bottom: 20px;
-    }
-    button {
-      padding: 6px 12px;
-      margin: 2px;
-    }
-    .logo, .upi {
-      height: 50px;
-    }
-  </style>
-</head>
-<body>
-
-  <h2>Standee Orders</h2>
-  <input type="text" id="search" placeholder="Search by name or phone" />
-
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Name</th>
-        <th>Phone</th>
-        <th>Standee Type</th>
-        <th>Icons</th>
-        <th>Other Icons</th>
-        <th>Logo</th>
-        <th>UPI QR</th>
-        <th>Download</th>
-        <th>Created At</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
-
-  <div style="margin-top: 20px;" id="pagination"></div>
-
-  <script>
-    const ITEMS_PER_PAGE = 10;
-    let allData = [];
-    let currentPage = 1;
-
-    function formatDateTime(dateStr) {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
-    }
-
-    async function fetchData() {
-      try {
-        const res = await fetch('https://customer-data2-43sy.vercel.app/api/data');
-        const json = await res.json();
-        if (json.success) {
-          allData = json.data;
-          renderTable();
-        } else {
-          alert('Failed to fetch data');
-        }
-      } catch (err) {
-        console.error('[Fetch Error]', err);
-        alert('Failed to fetch data');
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Standee Orders</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .logo,
+      .upi {
+        height: 40px;
       }
-    }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800 p-6">
+    <div class="max-w-7xl mx-auto">
+      <h2 class="text-2xl font-bold mb-4">Standee Orders</h2>
+      <input
+        type="text"
+        id="search"
+        placeholder="Search by name or phone"
+        class="mb-4 p-2 border border-gray-300 rounded w-full max-w-md"
+      />
+      <div class="overflow-x-auto">
+        <table class="w-full border border-gray-300 text-sm">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="p-2 border">#</th>
+              <th class="p-2 border">Name</th>
+              <th class="p-2 border">Phone</th>
+              <th class="p-2 border">Standee Type</th>
+              <th class="p-2 border">Icons</th>
+              <th class="p-2 border">Other Icons</th>
+              <th class="p-2 border">Logo</th>
+              <th class="p-2 border">UPI QR</th>
+              <th class="p-2 border">Download</th>
+              <th class="p-2 border">Status</th>
+              <th class="p-2 border">Created At</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div id="pagination" class="mt-4 flex flex-wrap gap-2"></div>
+    </div>
 
-    function renderTable() {
-      const search = document.getElementById('search').value.toLowerCase();
-      const filtered = allData.filter(item =>
-        item.name.toLowerCase().includes(search) ||
-        item.phone.includes(search)
-      );
+    <script>
+      const ITEMS_PER_PAGE = 10;
+      let allData = [];
+      let currentPage = 1;
 
-      const start = (currentPage - 1) * ITEMS_PER_PAGE;
-      const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
+      const STATUS_KEY = "order_status_store";
+      const statusMap = JSON.parse(localStorage.getItem(STATUS_KEY) || "{}");
 
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = '';
+      function saveStatusMap() {
+        localStorage.setItem(STATUS_KEY, JSON.stringify(statusMap));
+      }
 
-      paginated.forEach((order, i) => {
-        const hasUPI = order.icons_selected?.includes('UPI');
-        const tr = document.createElement('tr');
+      function formatDateTime(dateStr) {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString() + " " + d.toLocaleTimeString();
+      }
 
-        tr.innerHTML = `
-          <td>${start + i + 1}</td>
-          <td>${order.name}</td>
-          <td>${order.phone}</td>
-          <td>${order.standee_type}</td>
-          <td>${order.icons_selected?.join(', ') || '--'}</td>
-          <td>${order.other_icons || '--'}</td>
-          <td>${order.logo_url ? `<img src="${order.logo_url}" class="logo" />` : 'No Logo'}</td>
-          <td>
-            ${hasUPI ? (order.upi_qr_url ? `<img src="${order.upi_qr_url}" class="upi" />` : 'No QR') : '--'}
-          </td>
-          <td>
-            ${order.logo_url ? `<button onclick="downloadImage('${order.logo_url}', '${order.phone}-logo')">Logo</button>` : ''}
-            ${hasUPI && order.upi_qr_url ? `<button onclick="downloadImage('${order.upi_qr_url}', '${order.phone}-upi')">UPI</button>` : ''}
-          </td>
-          <td>${formatDateTime(order.created_at)}</td>
-        `;
+      async function fetchData() {
+        try {
+          const res = await fetch("https://customer-data2-43sy.vercel.app/api/data");
+          const json = await res.json();
+          if (json.success) {
+            allData = json.data;
+            renderTable();
+          } else {
+            alert("Failed to fetch data");
+          }
+        } catch (err) {
+          console.error("[Fetch Error]", err);
+          alert("Failed to fetch data");
+        }
+      }
 
-        tbody.appendChild(tr);
+      function renderTable() {
+        const search = document.getElementById("search").value.toLowerCase();
+        const filtered = allData.filter((item) =>
+          item.name.toLowerCase().includes(search) ||
+          item.phone.includes(search)
+        );
+
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
+
+        const tbody = document.getElementById("tableBody");
+        tbody.innerHTML = "";
+
+        paginated.forEach((order, i) => {
+          const hasUPI = order.icons_selected?.includes("UPI");
+          const statusKey = `${order.phone}_${order.created_at}`;
+          const isComplete = statusMap[statusKey] === true;
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="border p-2">${start + i + 1}</td>
+            <td class="border p-2">${order.name}</td>
+            <td class="border p-2">${order.phone}</td>
+            <td class="border p-2">${order.standee_type}</td>
+            <td class="border p-2">${order.icons_selected?.join(", ") || "--"}</td>
+            <td class="border p-2">${order.other_icons || "--"}</td>
+            <td class="border p-2">${
+              order.logo_url ? `<img src="${order.logo_url}" class="logo" />` : "No Logo"
+            }</td>
+            <td class="border p-2">${
+              hasUPI
+                ? order.upi_qr_url
+                  ? `<img src="${order.upi_qr_url}" class="upi" />`
+                  : "No QR"
+                : "--"
+            }</td>
+            <td class="border p-2">${
+              order.logo_url
+                ? `<button class="text-blue-600 underline" onclick="downloadImage('${order.logo_url}', '${order.phone}-logo')">Logo</button>`
+                : ""
+            }
+            ${
+              hasUPI && order.upi_qr_url
+                ? `<button class="text-green-600 underline ml-2" onclick="downloadImage('${order.upi_qr_url}', '${order.phone}-upi')">UPI</button>`
+                : ""
+            }</td>
+            <td class="border p-2">
+              <select onchange="changeStatus('${statusKey}', this)" class="p-1 border rounded">
+                <option value="false" ${!isComplete ? "selected" : ""}>Incomplete</option>
+                <option value="true" ${isComplete ? "selected" : ""}>Complete</option>
+              </select>
+            </td>
+            <td class="border p-2">${formatDateTime(order.created_at)}</td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+
+        renderPagination(filtered.length);
+      }
+
+      function changeStatus(key, selectEl) {
+        statusMap[key] = selectEl.value === "true";
+        saveStatusMap();
+      }
+
+      function renderPagination(totalItems) {
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+        const container = document.getElementById("pagination");
+        container.innerHTML = "";
+
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement("button");
+          btn.innerText = i;
+          btn.className = `px-3 py-1 border rounded ${
+            i === currentPage ? "bg-blue-600 text-white" : "bg-white"
+          }`;
+          btn.onclick = () => {
+            currentPage = i;
+            renderTable();
+          };
+          container.appendChild(btn);
+        }
+      }
+
+      function downloadImage(url, filename) {
+        fetch(url)
+          .then((res) => res.blob())
+          .then((blob) => {
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          })
+          .catch((err) => {
+            console.error("Download error:", err);
+          });
+      }
+
+      document.getElementById("search").addEventListener("input", () => {
+        currentPage = 1;
+        renderTable();
       });
 
-      renderPagination(filtered.length);
-    }
-
-    function renderPagination(totalItems) {
-      const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-      const container = document.getElementById('pagination');
-      container.innerHTML = '';
-
-      for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button');
-        btn.innerText = i;
-        btn.disabled = i === currentPage;
-        btn.onclick = () => {
-          currentPage = i;
-          renderTable();
-        };
-        container.appendChild(btn);
-      }
-    }
-
-    function downloadImage(url, filename) {
-      fetch(url)
-        .then(res => res.blob())
-        .then(blob => {
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-        })
-        .catch(err => {
-          console.error('Download error:', err);
-        });
-    }
-
-    document.getElementById('search').addEventListener('input', () => {
-      currentPage = 1;
-      renderTable();
-    });
-
-    fetchData();
-  </script>
-
-</body>
+      fetchData();
+    </script>
+  </body>
 </html>
